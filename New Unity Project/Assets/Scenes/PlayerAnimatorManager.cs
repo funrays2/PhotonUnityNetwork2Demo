@@ -3,7 +3,7 @@ using Photon.Pun;
 using UnityEngine;
 namespace Com.Dirox.MyGame
 {
-    public class PlayerAnimatorManager : MonoBehaviour {
+    public class PlayerAnimatorManager : MonoBehaviourPun {
         #region MonoBehaviour Callbacks
 
         private Animator animator;
@@ -16,6 +16,10 @@ namespace Com.Dirox.MyGame
 	    }
 	
 	    void Update () {
+            if (photonView.IsMine == false && PhotonNetwork.IsConnected == true)
+            {
+                return;
+            }
             if (!animator)
             {
                 return;

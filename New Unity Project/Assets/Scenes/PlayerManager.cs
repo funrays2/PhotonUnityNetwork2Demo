@@ -5,8 +5,41 @@ using UnityEngine.EventSystems;
 using Photon.Pun;
 namespace Com.Dirox.MyGame
 {
-    public class PlayerManager : MonoBehaviourPunCallbacks
+    public class PlayerManager : MonoBehaviourPunCallbacks, IPunObservable
     {
+        
+        #region IPunObservable implementation
+
+
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                // We own this player: send the others our data
+                stream.SendNext(IsFiring);
+            }
+            else
+            {
+                // Network player, receive data
+                this.IsFiring = (bool)stream.ReceiveNext();
+            }
+            if (stream.IsWriting)
+            {
+                // We own this player: send the others our data
+                stream.SendNext(IsFiring);
+                stream.SendNext(Health);
+            }
+            else
+            {
+                // Network player, receive data
+                this.IsFiring = (bool)stream.ReceiveNext();
+                this.Health = (float)stream.ReceiveNext();
+            }
+        }
+
+
+        #endregion
+
         #region Private Fields
         [Tooltip("The Beams GameObject to control")]
         [SerializeField]
@@ -19,11 +52,11 @@ namespace Com.Dirox.MyGame
 
         [Tooltip("The current Health of our player")]
         public float Health = 1f;
-
-        #endregion
+    
+    #endregion
         #region MonoBehaviour Callbacks
 
-        private void Awake()
+    private void Awake()
         {
             if(beams == null)
             {
@@ -34,12 +67,36 @@ namespace Com.Dirox.MyGame
                 beams.SetActive(false);
             }
         }
+        void Start()
+        {
+            CameraWork _cameraWork = this.gameObject.GetComponent<CameraWork>();
+
+
+            if (_cameraWork != null)
+            {
+                if (photonView.IsMine)
+                {
+                    _cameraWork.OnStartFollowing();
+                }
+            }
+            else
+            {
+                Debug.LogError("<Color=Red><a>Missing</a></Color> CameraWork Component on playerPrefab.", this);
+            }
+        }
         private void Update()
         {
-            ProcessInputs();
-            if(beams != null && IsFiring != beams.activeSelf)
+            if (photonView.IsMine)
+            {
+                ProcessInputs();
+            }
+            if (beams != null && IsFiring != beams.activeSelf)
             {
                 beams.SetActive(IsFiring);
+            }
+            if (Health <= 0f)
+            {
+                GameManager.Instance.LeaveRoom();
             }
         }
 
